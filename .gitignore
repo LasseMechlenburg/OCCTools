@@ -1,0 +1,7 @@
+work/
+outputs/OCCtools/data/
+outputs/OCCtools/dist/manuals/
+*.log
+node_modules/
+outputs/*.zip
+outputs/flightpoint-embed-test.html

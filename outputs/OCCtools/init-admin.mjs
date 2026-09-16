@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+const root=path.dirname(fileURLToPath(import.meta.url));
+let input='';for await(const chunk of process.stdin)input+=chunk;
+const {password,origin,port}=JSON.parse(input);
+if(typeof password!=='string'||password.length<14)throw new Error('Vælg en adgangskode med mindst 14 tegn.');
+const parsed=new URL(origin);if(!['http:','https:'].includes(parsed.protocol)||parsed.origin!==origin)throw new Error('Origin skal være fx http://occ.ne.int uden afsluttende skråstreg.');
+if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('Ugyldig port.');
+const dir=path.join(root,'data');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'config.json');
+if(fs.existsSync(file))throw new Error('Admin er allerede konfigureret. Eksisterende opsætning er bevaret.');
+const salt=crypto.randomBytes(32).toString('hex');
+fs.writeFileSync(file,JSON.stringify({origin,port,salt,passwordHash:crypto.scryptSync(password,salt,64).toString('hex')},null,2),{flag:'wx'});
+console.log('Admin er oprettet.');
