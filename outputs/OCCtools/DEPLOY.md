@@ -11,6 +11,8 @@ The whole portal must be restricted to authorized users at IIS/network level. Ad
 
 ## First installation (only after host review)
 
+Confirmed by the owner: occ.ne.int is accessible only via company internal network/VPN and all users with that access may read the portal data. Use anonymous IIS access inherited from OCCHUB; do not enable Windows authentication or alter sibling sites. Admin editing retains its own login. Target host: DK-AP-PR-OCCH01, IIS site OCCHUB, HTTPS origin https://occ.ne.int. Reassess this approval if network exposure changes.
+
 `Install-OCCtools.ps1 -SiteName '<confirmed site>' -Origin 'https://occ.ne.int' -PythonPath '<server python.exe>' -NssmPath '<server nssm.exe>' -ConfirmRestrictedAccess`
 
 The installer refuses an existing destination, service or IIS application. Do not delete an existing install to work around this check. Back up and plan an update separately. The installer creates a new admin password; use a strong unique password, not the local test password.
