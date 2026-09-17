@@ -25,9 +25,18 @@ async function openLocalPdf(t){
  pageInput.onchange=()=>showPage(Number(pageInput.value));
  try{const r=await api('documents?id='+encodeURIComponent(id));if(!heading.isConnected)return;const d=r.items[0];if(!d)throw new Error();total=d.pageCount;pageInput.max=String(total);count.textContent='af '+total;notice.textContent+=' Tilføjet '+new Date(d.addedAt).toLocaleDateString('da-DK')+' (ikke revisionsdato).'+(d.searchablePages<total?' Nogle sider er scannede og kan ikke tekstsøges.':'');showPage(Math.min(total,t.page||1));}catch{status.textContent='Dokumentet kunne ikke hentes.';}
 }
+function documentIsActive(d,source=data){
+ const url='/OCCtools/documents/'+d.id+'.pdf';
+ const owners=source.categories.filter(g=>g.tools.some(t=>t.url===url));
+ if(owners.length)return owners.some(g=>g.active!==false&&g.tools.some(t=>t.url===url&&t.active!==false));
+ const libraries=source.categories.filter(g=>g.tools.some(t=>t.id==='library-'+d.category));
+ if(libraries.length)return libraries.some(g=>g.active!==false&&g.tools.some(t=>t.id==='library-'+d.category&&t.active!==false));
+ const owner=source.categories.find(g=>g.id===(d.category==='transport-docs'?'crew':d.category));
+ return owner?.active!==false;
+}
 function documentMenuNames(d){
- const names=data.categories.filter(g=>g.tools.some(t=>t.url==='/OCCtools/documents/'+d.id+'.pdf')).map(g=>g.name);
- if(!names.length){const category=d.category==='transport-docs'?'crew':d.category;const g=data.categories.find(g=>g.id===category);names.push(g?.name||({'transport-docs':'Transport og hoteller','union-agreements':'Overenskomster',procedures:'Træning og manualer'}[d.category])||'PDF-bibliotek');}
+ const names=activeCategories().filter(g=>g.tools.some(t=>t.url==='/OCCtools/documents/'+d.id+'.pdf')).map(g=>g.name);
+ if(!names.length){const category=d.category==='transport-docs'?'crew':d.category;const g=activeCategories().find(g=>g.id===category);names.push(g?.name||({'transport-docs':'Transport og hoteller','union-agreements':'Overenskomster',procedures:'Træning og manualer'}[d.category])||'PDF-bibliotek');}
  return names.join(', ');
 }
 function documentCard(d){
@@ -40,8 +49,8 @@ async function openDocumentLibrary(category){
  dialog.replaceChildren();const top=el('div','dialogTop');top.append(el('h2','',category==='procedures'?'Procedurer og manualer':category==='transport-docs'?'Transportdokumenter':'Overenskomster'),button('×','close',()=>dialog.close()));top.lastChild.setAttribute('aria-label','Luk dokumentbibliotek');
  const q=el('input');q.type='search';q.placeholder='Søg i dokumenternes titler og indhold';q.setAttribute('aria-label','Søg i PDF-bibliotek');const folders=el('select');folders.setAttribute('aria-label','Proceduremappe');const state=el('p','muted'),list=el('div','documentGrid');
  dialog.append(top,el('p','notice','Lokale kopier – kontrollér gældende version i Comply365. Tilføjelsesdato er ikke revisionsdato.'),q,folders,state,list);dialog.showModal();let generation=0;
- try{const r=await api('documents?category='+encodeURIComponent(category));const names=[...new Set(r.items.flatMap(d=>[d.folder,...(d.alsoIn||[])]).filter(Boolean))].sort();for(const name of ['Alle mapper',...names]){const option=el('option','',name);option.value=name==='Alle mapper'?'':name;folders.append(option);}folders.hidden=names.length<2;}catch{state.textContent='Dokumentbiblioteket kunne ikke hentes.';return;}
- async function search(){const gen=++generation;state.textContent='Søger…';try{const r=await api('documents?category='+encodeURIComponent(category)+'&folder='+encodeURIComponent(folders.value)+'&q='+encodeURIComponent(q.value.trim()));if(gen!==generation||!dialog.open)return;list.replaceChildren(...r.items.map(documentCard));state.textContent=r.total+' resultater'+(r.total>r.items.length?' · viser de første 60, afgræns søgningen':'');}catch{if(gen===generation)state.textContent='Søgningen kunne ikke gennemføres.';}}
+ try{const r=await api('documents?category='+encodeURIComponent(category));const names=[...new Set(r.items.filter(d=>documentIsActive(d)).flatMap(d=>[d.folder,...(d.alsoIn||[])]).filter(Boolean))].sort();for(const name of ['Alle mapper',...names]){const option=el('option','',name);option.value=name==='Alle mapper'?'':name;folders.append(option);}folders.hidden=names.length<2;}catch{state.textContent='Dokumentbiblioteket kunne ikke hentes.';return;}
+ async function search(){const gen=++generation;state.textContent='Søger…';try{const r=await api('documents?category='+encodeURIComponent(category)+'&folder='+encodeURIComponent(folders.value)+'&q='+encodeURIComponent(q.value.trim()));if(gen!==generation||!dialog.open)return;const visibleItems=r.items.filter(d=>documentIsActive(d));list.replaceChildren(...visibleItems.map(documentCard));state.textContent=visibleItems.length+' synlige resultater'+(r.total>r.items.length?' · viser de første 60, afgræns søgningen':'');}catch{if(gen===generation)state.textContent='Søgningen kunne ikke gennemføres.';}}
  q.oninput=search;folders.onchange=search;await search();
 }
 function documentPdfSearch(t,frame){const row=el('div','pdfTextSearch'),q=el('input'),results=el('div','pdfTextResults');q.type='search';q.placeholder='Søg i dette dokument';q.setAttribute('aria-label','Søg i dette PDF-dokument');row.append(q,results);let timer,seq=0;const id=t.url.split('/').pop().replace('.pdf','');
@@ -51,11 +60,12 @@ document.addEventListener('input',e=>{if(e.target.id!=='portalSearchInput')retur
  documentSearchTimer=setTimeout(async()=>{
   try{
    const r=await api('documents?q='+encodeURIComponent(q));if(gen!==documentSearchGeneration||!input.isConnected)return;
-   host.className='searchGroup pdfSearchGroup';host.append(el('h3','','PDF-indhold · '+r.total+' sidematch'));
+   const visibleItems=r.items.filter(d=>documentIsActive(d));
+   host.className='searchGroup pdfSearchGroup';host.append(el('h3','','PDF-indhold · '+visibleItems.length+' synlige sidematch'));
    const list=el('div','groupResultGrid'),more=button('Vis flere PDF-resultater','quiet',()=>draw(visible+6));let visible=0;
-   function draw(count){visible=Math.min(count,r.items.length);list.replaceChildren(...r.items.slice(0,visible).map(documentCard));more.hidden=visible>=r.items.length;more.textContent='Vis flere PDF-resultater ('+visible+' af '+r.items.length+')';}
+   function draw(count){visible=Math.min(count,visibleItems.length);list.replaceChildren(...visibleItems.slice(0,visible).map(documentCard));more.hidden=visible>=visibleItems.length;more.textContent='Vis flere PDF-resultater ('+visible+' af '+visibleItems.length+')';}
    draw(6);host.append(list,more);
-   if(!r.items.length)host.append(el('p','muted','Ingen match i PDF-indhold.'));
+   if(!visibleItems.length)host.append(el('p','muted','Ingen match i PDF-indhold.'));
    if(r.total>r.items.length)host.append(el('p','muted','Op til 60 sidematch vises. Afgræns søgningen for flere relevante resultater.'));
   }catch{if(gen===documentSearchGeneration&&input.isConnected)host.append(el('p','error','PDF-søgningen kunne ikke hentes.'));}
  },250);

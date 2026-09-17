@@ -1,5 +1,13 @@
 # OCC status, 17. september 2026
 
+## UI-opdatering 20260917-44
+
+- Admin → Menuer og links har Aktiv menu og Aktivt link. Manglende felt betyder aktiv, så eksisterende indhold bevares uændret. Gem ændringer udgiver valget.
+- Inaktive menuer skjuler alle deres links uden at ændre underpunkternes egne indstillinger. Inaktive punkter markeres i admin-vælgerne og bevares dér.
+- Forside, menuhjul, Emergency-genvej og menusøgning bruger aktive punkter. PDF-søgning/bibliotek respekterer skjulte PDF-links og biblioteks-menuer. Det er visningsstyring, ikke adgangskontrol til direkte URL’er.
+- Faste sideknapper og Flight Monitoring er fortsat separate indbyggede genveje, ikke admin-menuer.
+- Opdateringen er statisk; eksisterende server gemmer active-feltet allerede sammen med indholdet. Ingen datafil eller serverkonfiguration udskiftes.
+
 ## UI-opdatering 20260917-43
 
 - Kopiér-knapper ved kontakttelefoner og passwords. Clipboard-fejl vises uden at afsløre password; kopiering kræver browserens tilladelse og sikker kontekst.
