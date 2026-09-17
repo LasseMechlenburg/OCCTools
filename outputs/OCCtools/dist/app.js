@@ -15,6 +15,18 @@ document.addEventListener('click',e=>{
  e.preventDefault();window.open(url.href,'_blank','popup=yes,width=1280,height=900,resizable=yes,scrollbars=yes,noopener,noreferrer');
 });
 function button(text,cls,fn){const b=el('button',cls,text);b.type='button';b.onclick=fn;return b;}
+function copyButton(value,label){
+ const b=button('Kopiér','quiet copyButton',async()=>{
+  b.disabled=true;
+  try{
+   if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+   await navigator.clipboard.writeText(value);
+   b.textContent='Kopieret ✓';toast('Kopieret til udklipsholder.');
+  }catch{b.textContent='Prøv igen';toast('Kunne ikke kopiere. Tillad udklipsholder i browseren, eller kopiér manuelt.');}
+  finally{b.disabled=false;setTimeout(()=>{if(b.isConnected)b.textContent='Kopiér';},2200);}
+ });
+ b.setAttribute('aria-label','Kopiér '+label);b.title='Kopiér '+label;return b;
+}
 function initializeTheme(){
  const root=document.documentElement;let dark=false;
  try{dark=localStorage.getItem('occ-theme')==='dark';}catch{}
@@ -197,8 +209,38 @@ async function loadOpenChecklistData(force=false){
 }
 async function openContacts(query=''){closeCalendarFloat();contactsQuery=query;showDetail('FlightPoint','Airlines Contacts / TWR','Henter kontakter…');$('#detailContent').dataset.contacts='true';renderContacts();await ensureFlightpoint();}
 $('#detail').addEventListener('close',()=>delete $('#detailContent').dataset.contacts);
-function renderContacts(){const c=$('#detailContent');if(!$('#detail').open||!c.dataset.contacts)return;c.replaceChildren(el('h2','','Airlines Contacts / TWR'));const refresh=button(flightpointLoading?'Henter…':'Opdatér fra FlightPoint','quiet',refreshFlightpoint);refresh.disabled=flightpointLoading;c.append(refresh);if(flightpointError)c.append(el('p','error',flightpointError+' Tidligere data er ikke opdateret.'));if(!flightpointData){c.append(el('p','notice',flightpointLoading?'Henter kontaktlisten…':'Kontaktlisten kunne ikke hentes.'));return;}c.append(el('p','muted',`Hentet ${new Date(flightpointData.stamp).toLocaleString('da-DK',{timeZone:'Europe/Copenhagen'})}`));if(flightpointData.contactsPartial)c.append(el('p','error','Listen er ufuldstændig. Slå paginering til i flowet.'));const label=el('label','searchLabel','Søg i kontakter'),input=el('input');input.type='search';input.placeholder='Navn, telefon eller email…';input.value=contactsQuery;label.append(input);const count=el('p','muted'),list=el('div','contactsList');count.setAttribute('role','status');c.append(label,count,list);function search(){contactsQuery=input.value;const q=contactsQuery.toLocaleLowerCase('da');list.replaceChildren();const found=flightpointData.contacts.filter(t=>[t.title,t.phone,t.email].join(' ').toLocaleLowerCase('da').includes(q));count.textContent=`${found.length} kontakter`;found.forEach(t=>{const card=el('article','calendarEvent');card.append(el('h3','',t.title));if(t.phone)card.append(el('p','',t.phone));if(t.email)card.append(el('p','',t.email));try{const u=new URL(t.url);if(u.protocol==='https:'&&u.hostname==='bwoty.sharepoint.com')card.append(link('Åbn original ↗',u.href,'textButton'));}catch{}list.append(card);});if(!found.length)list.append(el('p','empty','Ingen kontakter matcher søgningen.'));}input.oninput=search;search();}
-function portalSearch(){const section=el('section','portalSearch'),label=el('label','searchLabel','Søg i OCC'),input=el('input'),results=el('div','searchResults'),status=el('p','muted');input.id='portalSearchInput';input.type='search';input.placeholder='Søg i værktøjer, procedurer, PDF’er, kalender og kontakter…';label.append(input);results.hidden=true;status.setAttribute('role','status');section.append(label,status,results);function search(){const q=input.value.trim().toLocaleLowerCase('da');results.replaceChildren();results.hidden=!q;status.textContent='';if(!q)return;const found=[],match=v=>v.join(' ').toLocaleLowerCase('da').includes(q);data.categories.forEach(g=>g.tools.forEach(t=>{if(match([g.name,t.name,t.url,t.description]))found.push({title:t.name,kind:g.name,action:()=>{delete $('#detailContent').dataset.contacts;toolInfo(t);}});}));data.projects.filter(p=>p.visible).forEach(p=>{if(match([p.name,p.summary,p.body]))found.push({title:p.name,kind:'Projekt',action:()=>{delete $('#detailContent').dataset.contacts;projectInfo(p);}});});for(const key of ['calendar','adhocCalendar'])flightpointData?.[key].items.forEach(t=>{if(match([t.title,t.category,calendarPlain(t.description)]))found.push({title:t.title,kind:key==='calendar'?'OCC-kalender':'Adhoc / Maint',action:()=>{selectedCalendar=key;calendarSnapshot=flightpointData[key];calendarQuery=q;openCalendarQuickView();}});});flightpointData?.contacts.forEach(t=>{if(match([t.title,t.phone,t.email]))found.push({title:t.title,kind:'Kontakt',action:()=>openContacts(q)});});status.textContent=`${found.length} resultater`+(flightpointData?' · inklusive senest hentede FlightPoint-data':' · hent kalender/kontakter for at søge i dem');found.slice(0,50).forEach(r=>{const b=button('','searchResult',r.action);b.append(el('strong','',r.title),el('small','muted',r.kind));results.append(b);});if(!found.length)results.append(el('p','empty','Ingen match.'));}input.oninput=search;input.onfocus=async()=>{if(!flightpointData){try{const r=await api('flightpoint');if(r.data){acceptFlightpoint(r.data);search();}}catch{}}};return section;}
+function renderContacts(){const c=$('#detailContent');if(!$('#detail').open||!c.dataset.contacts)return;c.replaceChildren(el('h2','','Airlines Contacts / TWR'));const refresh=button(flightpointLoading?'Henter…':'Opdatér fra FlightPoint','quiet',refreshFlightpoint);refresh.disabled=flightpointLoading;c.append(refresh);if(flightpointError)c.append(el('p','error',flightpointError+' Tidligere data er ikke opdateret.'));if(!flightpointData){c.append(el('p','notice',flightpointLoading?'Henter kontaktlisten…':'Kontaktlisten kunne ikke hentes.'));return;}c.append(el('p','muted',`Hentet ${new Date(flightpointData.stamp).toLocaleString('da-DK',{timeZone:'Europe/Copenhagen'})}`));if(flightpointData.contactsPartial)c.append(el('p','error','Listen er ufuldstændig. Slå paginering til i flowet.'));const label=el('label','searchLabel','Søg i kontakter'),input=el('input');input.type='search';input.placeholder='Navn, telefon eller email…';input.value=contactsQuery;label.append(input);const count=el('p','muted'),list=el('div','contactsList');count.setAttribute('role','status');c.append(label,count,list);function search(){contactsQuery=input.value;const q=contactsQuery.toLocaleLowerCase('da');list.replaceChildren();const found=flightpointData.contacts.filter(t=>[t.title,t.phone,t.email].join(' ').toLocaleLowerCase('da').includes(q));count.textContent=`${found.length} kontakter`;found.forEach(t=>{const card=el('article','calendarEvent');card.append(el('h3','',t.title));if(t.phone){const line=el('p','copyLine');line.append(el('span','',t.phone),copyButton(t.phone,'telefonnummer'));card.append(line);}if(t.email)card.append(el('p','',t.email));try{const u=new URL(t.url);if(u.protocol==='https:'&&u.hostname==='bwoty.sharepoint.com')card.append(link('Åbn original ↗',u.href,'textButton'));}catch{}list.append(card);});if(!found.length)list.append(el('p','empty','Ingen kontakter matcher søgningen.'));}input.oninput=search;search();}
+function searchToolGroup(t){
+ if(t.display==='pdf'||/\.pdf(?:[?#]|$)/i.test(t.url||''))return 'PDF-links';
+ if(/apps\.powerapps\.com/i.test(t.url||''))return 'Apps';
+ return 'Værktøjer og links';
+}
+function portalSearch(){
+ const section=el('section','portalSearch'),label=el('label','searchLabel','Søg i OCC'),input=el('input'),results=el('div','searchGroups'),status=el('p','muted');
+ input.id='portalSearchInput';input.type='search';input.placeholder='Søg i apps, værktøjer, PDF’er, kalender og kontakter…';
+ label.append(input);results.hidden=true;status.setAttribute('role','status');section.append(label,status,results);
+ function search(){
+  const q=input.value.trim().toLocaleLowerCase('da');results.replaceChildren();results.hidden=!q;status.textContent='';if(!q)return;
+  const found=[],match=v=>v.join(' ').toLocaleLowerCase('da').includes(q);
+  data.categories.forEach(g=>g.tools.forEach(t=>{if(match([g.name,t.name,t.url,t.description]))found.push({title:t.name,group:searchToolGroup(t),kind:'Menu: '+g.name,tool:t,action:()=>{delete $('#detailContent').dataset.contacts;toolInfo(t);}});}));
+  data.projects.filter(p=>p.visible).forEach(p=>{if(match([p.name,p.summary,p.body]))found.push({title:p.name,group:'Nye tiltag',kind:'Nye tiltag',action:()=>{delete $('#detailContent').dataset.contacts;projectInfo(p);}});});
+  for(const key of ['calendar','adhocCalendar'])flightpointData?.[key].items.forEach(t=>{if(match([t.title,t.category,calendarPlain(t.description)]))found.push({title:t.title,group:'Kalender',kind:key==='calendar'?'OCC-kalender':'Adhoc / Maint',action:()=>{selectedCalendar=key;calendarSnapshot=flightpointData[key];calendarQuery=q;openCalendarQuickView();}});});
+  flightpointData?.contacts.forEach(t=>{if(match([t.title,t.phone,t.email]))found.push({title:t.title,group:'Kontakter',kind:'Contacts / TWR',action:()=>openContacts(q)});});
+  status.textContent=found.length+' match i menuer, tiltag og FlightPoint · PDF-indhold vises separat nedenfor';
+  for(const group of ['Apps','Værktøjer og links','PDF-links','Nye tiltag','Kalender','Kontakter']){
+   const rows=found.filter(r=>r.group===group).sort((a,b)=>Number(b.title.toLocaleLowerCase('da').includes(q))-Number(a.title.toLocaleLowerCase('da').includes(q)));if(!rows.length)continue;
+   const block=el('section','searchGroup'),heading=el('h3','',group+' · '+rows.length),grid=el('div','groupResultGrid');
+   for(const r of rows.slice(0,20)){
+    const direct=r.tool?.url&&!builtInTools.has(r.tool.id)&&!['adhoc-calendar'].includes(r.tool.id)&&r.tool.display!=='pdf'&&/^https?:/i.test(r.tool.url);
+    const b=direct?link('',r.tool.url,'searchResult'):button('','searchResult',r.action);
+    b.append(el('strong','',r.title+(direct?' ↗':'')),el('small','muted',r.kind));grid.append(b);
+   }
+   block.append(heading,grid);if(rows.length>20)block.append(el('p','muted','Viser de første 20. Afgræns søgningen.'));results.append(block);
+  }
+  if(!found.length)results.append(el('p','empty','Ingen match i menuer eller FlightPoint. Se PDF-søgningen nedenfor.'));
+ }
+ input.oninput=search;input.onfocus=async()=>{if(!flightpointData){try{const r=await api('flightpoint');if(r.data){acceptFlightpoint(r.data);search();}}catch{}}};return section;
+}
 api('content').then(v=>{data=v;render();}).catch(e=>{const l=$('#loading');l.replaceChildren(el('p','error','Portalen kunne ikke indlæses. '+e.message),button('Prøv igen','quiet',()=>location.reload()));});
 async function refreshRunitems(){if(flightpointLoading)return;flightpointLoading=true;flightpointError='';renderListView();try{const r=await api('runitems',{method:'POST',body:'{}'});const incoming=r.data?.runitems?.value||[];if(flightpointData)flightpointData={...flightpointData,runitems:incoming.map(t=>{const text=v=>typeof v==='string'?v:typeof v==='number'?String(v):v?.Value||'';const run=text(t.Run),parts=run.trim().match(/^(\d{4}-\d{2}-\d{2})\s+(D|CD|N|CN)$/i);return{id:t.ID,title:text(t.Title)||run,day:text(t.Day||t.Code||t.Duty||parts?.[2]).toUpperCase(),date:text(t.FlightDate||parts?.[1]),description:text(t.Description),done:t.Completed===true||t.Done===true||['true','yes'].includes(text(t.Completed??t.Done).toLowerCase()),status:text(t.Status)};})};else flightpointData={runitems:[]};}catch(e){flightpointError=e.message;}finally{flightpointLoading=false;renderListView();}}
 function openListView(kind){closeCalendarFloat();listView=kind;showDetail('FlightPoint',kind==='passwords'?'Passwords':'OCC runitems','Henter…');$('#detailContent').dataset.listView=kind;if(kind==='runitems')refreshRunitems();else if(kind==='passwords'){renderPasswordsView();ensureFlightpoint().then(renderPasswordsView);}else{renderListView();refreshFlightpoint();}}/*
@@ -222,7 +264,7 @@ function renderPasswordsView(){
   const rows=flightpointData.passwords.filter(t=>[t.title,t.user,t.url].join(' ').toLocaleLowerCase('da').includes(q));
   count.textContent=rows.length+' poster';list.replaceChildren();
   rows.forEach(t=>{const card=el('article','calendarEvent');card.append(el('h3','',t.title));if(t.user)card.append(el('p','','Bruger: '+t.user));
-   if(t.password){const value=el('code','secretValue','••••••••');let shown=false;const reveal=button('Show password','quiet',()=>{shown=!shown;value.textContent=shown?t.password:'••••••••';reveal.textContent=shown?'Hide password':'Show password';});const line=el('p');line.append(value,document.createTextNode(' '),reveal);card.append(line);}else card.append(el('p','muted','Ingen passwordværdi i flowets svar.'));
+   if(t.password){const value=el('code','secretValue','••••••••');let shown=false;const reveal=button('Show password','quiet',()=>{shown=!shown;value.textContent=shown?t.password:'••••••••';reveal.textContent=shown?'Hide password':'Show password';});const line=el('p','copyLine');line.append(value,reveal,copyButton(t.password,'password'));card.append(line);}else card.append(el('p','muted','Ingen passwordværdi i flowets svar.'));
    if(t.url)card.append(link('Åbn link ↗',t.url,'textButton'));list.append(card);
   });if(!rows.length)list.append(el('p','empty','Ingen passwords matcher søgningen.'));
  }

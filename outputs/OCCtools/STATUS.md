@@ -1,4 +1,11 @@
-# OCC status, 16. september 2026
+# OCC status, 17. september 2026
+
+## UI-opdatering 20260917-43
+
+- Kopiér-knapper ved kontakttelefoner og passwords. Clipboard-fejl vises uden at afsløre password; kopiering kræver browserens tilladelse og sikker kontekst.
+- Global søgning opdeles i Apps (PowerApps), Værktøjer og links, PDF-links, Nye tiltag, Kalender og Kontakter, med menunavn. Eksterne links åbnes direkte i separat vindue som øvrige links.
+- PDF-indhold står separat med seks kompakte sidematch først og Vis flere; menutilknytning vises. Lys og mørk tilstand understøttes.
+- Update-OCCtools-UI.ps1 opdaterer kun fire statiske filer med backup og rollback. Serversiden er ikke opdateret før operatøren kører pakken.
 
 ## Menuer og links, seneste opdatering
 
