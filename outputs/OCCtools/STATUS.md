@@ -1,5 +1,19 @@
 # OCC status, 17. september 2026
 
+## Samlet dagsopdatering klar lokalt (20260917-47) — ikke installeret på serveren
+
+- Tilføj punkt i Åbne checklister: vælg konkret Run.Id (også adhoc) og titel. Dropdown viser kun lister med åbne punkter i henteflowets svar. Flowet kontrollerer OCC_Runs.Status=Active før oprettelse i OCC_RunItems. SortOrder=0, Done/StartFlow/Alerted=No.
+- Fremtidige punkter: D/CD/N/CN, gyldig dato efter dansk dagsdato, titel. OCC_Templates: Active=Yes, DaysMask=1,2,3,4,5,6,7, Season=All, ValidFrom=ValidTo=valgt dato, Role=OCC, StartFlow=No, SortOrder=0. Ingen tid eller ekstra fritekstfelter.
+- Privat data/checklist-item-flow-url.txt (lokalt work/checklist-item-flow-url.txt). Servervalidering, Origin-kontrol, vedvarende request-journal, ingen automatisk retry ved usikkert udfald. HTTP-fejl fra flowet, inklusive 409, behandles konservativt som ubekræftet og kræver kontrol af flowhistorik/SharePoint.
+- Åbn i eget vindue ved hver åben liste. URL ?checklistRun=<Run.Id> viser kun den valgte liste med navnefelt, afkrydsning og Refresh. Ingen automatisk synkronisering mellem vinduer; brug Refresh. Browseren afgør vinduesplacering og popup-tilladelse.
+- Samlet privat ZIP: OCCtools-daily-private-20260917-47.zip. Update-OCCtools-Daily.ps1 udskifter kun de ti programfiler og de to nye flowfiler, tager backup og genstarter kun OCCtools. Eksisterende config, indhold, PDF'er, oprindelige flows, serviceindstillinger og IIS ændres ikke. Automatisk tilbagerulning af tidligere filer ved opdaterings-/helbredstjekfejl; nye ubrugte filer kan blive liggende efter rollback.
+- 18 automatiske tests bestået. Browsermock: adhoc-tilføjelse, Refresh, fremtidig tilføjelse, usikkert udfald låser formularen, separat checklist-visning og afkrydsning. Opdateringsscript testet isoleret for succes og rollback med uændret admin-konfiguration. Ingen rigtige SharePoint-poster oprettet eller afkrydset i disse tests. Live sluttest udføres efter serverinstallation.
+- Installer til nye installationer inkluderer nu checklist-item-moduler og lokal IIS rewrite <clear/>; dagsopdateringen rører ikke eksisterende IIS-konfiguration.
+
+- Brugeren har endnu ikke installeret dagens opdateringer på serveren og ønsker én samlet pakke til sidst. De tidligere 43/44/45-pakker er derfor ikke dokumentation for serverens version.
+- Knaptekster og henvisninger Opdatér / Opdatér fra FlightPoint ændret til Refresh. Åbn et område er fjernet. Kun lokale filer ændret indtil samlet deployment.
+- Brugerens OnSelect-formel og det nye flow er modtaget. Tilføj punkt er nu implementeret som beskrevet ovenfor.
+
 ## Log-oprettelse 20260917-45
 
 - Lav entry i Crew-/Trafiklog kræver kun Title (1–255 tegn). Flowkontrakt: logType=crew|traffic og title; Response {ok:true}. Faste feltværdier sættes i flowet: dansk dagsdato, Info only, Open, Traffic Log Type=General Info (ikke Flight).

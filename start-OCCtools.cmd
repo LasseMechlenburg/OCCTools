@@ -13,6 +13,8 @@ set "OCC_TEMPLATES_FLOW_URL_FILE=%~dp0work\templates-flow-url.txt"
 set "OCC_DONE_FLOW_URL_FILE=%~dp0work\done-flow-url.txt"
 set "OCC_START_FLOW_URL_FILE=%~dp0work\start-flow-url.txt"
 set "OCC_START_READ_READY=1"
+set "OCC_LOG_CREATE_FLOW_URL_FILE=%~dp0work\log-create-flow-url.txt"
+set "OCC_CHECKLIST_ITEM_FLOW_URL_FILE=%~dp0work\checklist-item-flow-url.txt"
 set "OCC_LOGS_FLOW_URL_FILE=%~dp0work\logs-flow-url.txt"
 echo Starter OCC-portalen...
 node outputs\OCCtools\server.mjs

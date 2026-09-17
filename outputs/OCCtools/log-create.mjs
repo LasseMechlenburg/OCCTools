@@ -7,9 +7,9 @@ export function validateLogEntry(b){
  if(!['crew','traffic'].includes(b?.logType)||typeof b.title!=='string'||!b.title.trim()||b.title.length>255||/[\x00-\x1f\x7f]/.test(b.title)||!/^[-a-zA-Z0-9]{16,80}$/.test(b.requestId||''))throw failure('Vælg log og skriv en titel på højst 255 tegn.',400);
  return {logType:b.logType,title:b.title.trim(),requestId:b.requestId};
 }
-function send(root,url,payload){
+function send(root,url,payload,script='log-create-request.ps1'){
  return new Promise((resolve,reject)=>{
-  const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-File',path.join(root,'log-create-request.ps1')],{windowsHide:true,stdio:['pipe','pipe','pipe']});
+  const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-File',path.join(root,script)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
   let output='',oversize=false;const timer=setTimeout(()=>{child.kill();reject(new Error('Unconfirmed'));},60000);
   child.stdout.setEncoding('utf8');child.stdout.on('data',chunk=>{output+=chunk;if(output.length>10000){oversize=true;child.kill();}});child.stderr.resume();child.stdin.on('error',()=>{});
   child.on('error',()=>{clearTimeout(timer);reject(new Error('Unconfirmed'));});
@@ -17,10 +17,11 @@ function send(root,url,payload){
   child.stdin.end(JSON.stringify({url,...payload}));
  });
 }
-export function logWriter(root,file,journalDir,transport=payload=>send(root,payload.url,payload.body)){
+export function logWriter(root,file,journalDir,transport,options={}){
+ transport??=payload=>send(root,payload.url,payload.body,options.script);
  const pending=new Map();
  return async input=>{
-  const b=validateLogEntry(input),payload={logType:b.logType,title:b.title},hash=crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  const b=(options.validate||validateLogEntry)(input),payload=options.payload?options.payload(b):{logType:b.logType,title:b.title},hash=crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   if(!fs.existsSync(file))throw failure('Oprettelse af logposter er ikke konfigureret på serveren.',503);
   let target;try{target=new URL(fs.readFileSync(file,'utf8').trim());if(target.protocol!=='https:'||!target.hostname.endsWith('.environment.api.powerplatform.com')||target.username||target.password)throw new Error();}catch{throw failure('Log-flowets adresse er ugyldig.',503);}
   fs.mkdirSync(journalDir,{recursive:true});const record=path.join(journalDir,b.requestId+'.json');

@@ -17,7 +17,7 @@ function openChecklistStart(label){
    const r=await api('checklist-start',{method:'POST',body:JSON.stringify({checklistCode:code,reference,requestId})});
    if(r.ok!==true)throw new Error('Oprettelsen blev ikke bekræftet. Kontrollér flowhistorikken før et nyt forsøg.');
    message.textContent='Oprettet i SharePoint. Henter åbne checklister…';
-   try{await loadOpenChecklistData(true);message.textContent='Oprettet. Åbn oversigten for at se checklisten.';}catch{message.textContent='Oprettet, men oversigten kunne ikke opdateres. Opret ikke igen; brug Opdatér under Åbne checklister.';}
+   try{await loadOpenChecklistData(true);message.textContent='Oprettet. Åbn oversigten for at se checklisten.';}catch{message.textContent='Oprettet, men oversigten kunne ikke opdateres. Opret ikke igen; brug Refresh under Åbne checklister.';}
    c.append(button('Åbn checklister','quiet',()=>openChecklistStandalone()));
   }catch(e){message.className='error';message.textContent=e.message;}
  });
@@ -201,7 +201,7 @@ function logEntryControls(logType,onSaved){
    try{
     const result=await api('log-create',{method:'POST',body:JSON.stringify({logType,title:state.title,requestId:state.requestId})});if(result.ok!==true)throw new Error('Gemningen blev ikke bekræftet.');
     Object.assign(state,{title:'',requestId:'',uncertain:false,message:'Logposten er gemt i SharePoint.'});state.busy=false;rememberLogEntry(logType,state);draw();
-    await onSaved();if(logsError){state.message='Logposten er gemt, men listen kunne ikke opdateres. Brug Opdatér — opret ikke posten igen.';draw();}
+    await onSaved();if(logsError){state.message='Logposten er gemt, men listen kunne ikke opdateres. Brug Refresh — opret ikke posten igen.';draw();}
    }catch(error){state.busy=false;state.uncertain=error.uncertain!==false;state.message=state.uncertain?'Gemningen blev ikke bekræftet. Posten kan være oprettet. Kontrollér SharePoint og flowhistorikken før et nyt forsøg.':error.message;rememberLogEntry(logType,state);draw();}
   };
  }
@@ -216,7 +216,7 @@ function openLogView(key){
  function render(){
   if(!current())return;
   view.replaceChildren(el('h2','',title),entries);
-  const refresh=button(logsPending?'Henter…':'Opdatér','quiet',async()=>{const task=loadLogs(true);render();await task;render();});refresh.disabled=!!logsPending;view.append(refresh);
+  const refresh=button(logsPending?'Henter…':'Refresh','quiet',async()=>{const task=loadLogs(true);render();await task;render();});refresh.disabled=!!logsPending;view.append(refresh);
   if(logsError)view.append(el('p','error',logsError+(logsData?' Viser senest hentede data.':'')));
   if(!logsData){view.append(el('p','notice',logsPending?'Henter åbne logposter…':'Ingen logdata hentet.'));return;}
   const source=logsData[dataKey];

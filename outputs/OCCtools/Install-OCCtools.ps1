@@ -41,7 +41,7 @@ try {
  $passwordText = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
  if ($passwordText.Length -lt 14) { throw 'Adgangskoden skal have mindst 14 tegn.' }
  New-Item -ItemType Directory -Path $targetFull | Out-Null
- foreach ($name in @('dist','server.mjs','templates.mjs','logs.mjs','log-create.mjs','log-create-request.ps1','runitems.mjs','checklist-start.mjs','checklist-done.mjs','documents.mjs','pdf-index.py','pdf-preview.py','flow-request.ps1','start-request.ps1','done-request.ps1','init-admin.mjs','seed.json','package.json','README.md','DEPLOY.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $targetFull -Recurse }
+ foreach ($name in @('dist','server.mjs','templates.mjs','logs.mjs','log-create.mjs','log-create-request.ps1','checklist-item.mjs','checklist-item-request.ps1','runitems.mjs','checklist-start.mjs','checklist-done.mjs','documents.mjs','pdf-index.py','pdf-preview.py','flow-request.ps1','start-request.ps1','done-request.ps1','init-admin.mjs','seed.json','package.json','README.md','DEPLOY.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $targetFull -Recurse }
  $setupJson = @{ username=$AdminUsername; password=$passwordText; origin=$Origin; port=$Port } | ConvertTo-Json -Compress
  # JSON escapes preserve Danish characters through Windows PowerShell 5.1's native pipe.
  $setupAscii = [regex]::Replace($setupJson, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })
@@ -64,7 +64,7 @@ $proxyDir = Join-Path $targetFull 'iis-proxy'
 New-Item -ItemType Directory -Path $proxyDir | Out-Null
 $webConfig = @"
 <?xml version="1.0" encoding="utf-8"?>
-<configuration><system.webServer><security><requestFiltering><requestLimits maxAllowedContentLength="40000000" /></requestFiltering></security><rewrite><rules><rule name="OCCtools local service" stopProcessing="true"><match url="(.*)" /><action type="Rewrite" url="http://127.0.0.1:$Port/OCCtools/{R:1}" appendQueryString="true" /></rule></rules></rewrite><httpErrors existingResponse="PassThrough" /></system.webServer></configuration>
+<configuration><system.webServer><security><requestFiltering><requestLimits maxAllowedContentLength="40000000" /></requestFiltering></security><rewrite><rules><clear /><rule name="OCCtools local service" stopProcessing="true"><match url="(.*)" /><action type="Rewrite" url="http://127.0.0.1:$Port/OCCtools/{R:1}" appendQueryString="true" /></rule></rules></rewrite><httpErrors existingResponse="PassThrough" /></system.webServer></configuration>
 "@
 [IO.File]::WriteAllText((Join-Path $proxyDir 'web.config'), $webConfig, [Text.UTF8Encoding]::new($false))
 function Invoke-Nssm([string[]]$Arguments) { & $nssmExe @Arguments; if ($LASTEXITCODE -ne 0) { throw "NSSM-handling mislykkedes: $($Arguments[0]). Se status for OCCtools før et nyt forsøg." } }

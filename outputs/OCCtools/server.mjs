@@ -8,6 +8,7 @@ import {spawn} from 'node:child_process';
 import {templateReader} from './templates.mjs';
 import {logsReader} from './logs.mjs';
 import {logWriter} from './log-create.mjs';
+import {checklistItemWriter} from './checklist-item.mjs';
 import {normalizeRunitem} from './runitems.mjs';
 import {startWriter,validateStart} from './checklist-start.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -23,6 +24,8 @@ if(!fs.existsSync(file))fs.writeFileSync(file,JSON.stringify({revision:1,...JSON
 let content=JSON.parse(fs.readFileSync(file,'utf8'));
 const logCreateFile=process.env.OCC_LOG_CREATE_FLOW_URL_FILE||path.join(dataDir,'log-create-flow-url.txt');
 const createLogEntry=logWriter(root,logCreateFile,path.join(dataDir,'log-create-attempts'));
+const checklistItemFile=process.env.OCC_CHECKLIST_ITEM_FLOW_URL_FILE||path.join(dataDir,'checklist-item-flow-url.txt');
+const createChecklistItem=checklistItemWriter(root,checklistItemFile,path.join(dataDir,'checklist-item-attempts'));
 const sessions=new Map();let failures=0,blockedUntil=0;
 let flightpointCache=null,flightpointPending=null;
 const flowFile=process.env.OCC_FLOW_URL_FILE||path.join(dataDir,'flow-url.txt');
@@ -92,6 +95,7 @@ if(route.startsWith('/api/')){
  if(req.method==='GET'&&route==='/api/templates')return reply(res,200,templates.snapshot());
  if(req.method==='GET'&&route==='/api/logs')return reply(res,200,logs.snapshot());
  if(req.method==='GET'&&route==='/api/log-create')return reply(res,200,{configured:fs.existsSync(logCreateFile)});
+ if(req.method==='GET'&&route==='/api/checklist-item')return reply(res,200,{configured:fs.existsSync(checklistItemFile)});
  if(req.method==='GET'&&route==='/api/checklist-start')return reply(res,200,{configured:fs.existsSync(startFlowFile),ready:startReadReady&&fs.existsSync(startFlowFile)});
  if(req.method==='GET'&&route==='/api/flightpoint')return reply(res,200,{configured:fs.existsSync(flowFile),data:flightpointCache});
  if(req.method==='GET'&&route==='/api/runitems')return reply(res,200,{configured:fs.existsSync(runitemsFlowFile),data:runitemsCache});
@@ -107,6 +111,10 @@ if(route.startsWith('/api/')){
  if(req.method==='POST'&&route==='/api/log-create'){
   const input=await body(req,4096);
   try{return reply(res,200,await createLogEntry(input));}catch(e){return reply(res,e.status||502,{error:e.message,uncertain:e.uncertain!==false&&e.status!==400&&e.status!==503});}
+ }
+ if(req.method==='POST'&&route==='/api/checklist-item'){
+  const input=await body(req,4096);
+  try{return reply(res,200,await createChecklistItem(input));}catch(e){return reply(res,e.status||502,{error:e.message,uncertain:e.uncertain!==false&&e.status!==400&&e.status!==503});}
  }
  if(req.method==='POST'&&route==='/api/checklist-start'){
   const input=validateStart(await body(req));
