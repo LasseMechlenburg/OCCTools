@@ -1,5 +1,15 @@
 # OCC status, 17. september 2026
 
+## Daily log klar lokalt — 20260917-48 (serveropdatering afventer)
+
+- Ny fælles Daily log under Overblik: hover-forhåndsvisning, datovalg, note op til 63.999 tegn, selvangivet navn, dagens redigering og eget vindue. Historiske dage er læsevisning. Enter er linjeskift; knappen gemmer.
+- CreatedByName bevares ved redigering; ModifiedByName viser seneste redaktør. Server validerer navn/tekst/dato/ID/ETag; genhenter dagens entry før update; flow kontrollerer Created i dansk tid og REST IF-MATCH. Midnatsgrænse kontrolleres igen efter serverens læsning, og UI låser ved datoskift. Ingen garanti mod et flowkald, som allerede er i gang præcis ved midnat; direkte SharePoint-redigering følger SharePoints rettigheder.
+- Vedvarende journal mod gentagelse af samme request-id. Kendt 409/412 kræver genindlæsning; ubekræftet resultat låser kladden til manuel kontrol. Kladder i sessionStorage; tekst vises som ren tekst. storage-event mellem samme origins vinduer markerer ændringer uden at dele noteteksten; et vindue med kladde bevarer den.
+- Nye private filer data/daily-log-read-flow-url.txt og data/daily-log-write-flow-url.txt. Lokalt tilsvarende i work, env OCC_DAILY_LOG_READ_FLOW_URL_FILE / OCC_DAILY_LOG_WRITE_FLOW_URL_FILE. Ingen signerede adresser i Git/frontend.
+- Rigtigt læseflow kontrolleret: dansk dagsdato 2026-09-17, 0 entries, ingen pagination-advarsel. Ingen rigtige entries oprettet/redigeret af agenten. Første gemning i rigtigt skriveflow og SharePoints dato-/ETag-output på en rigtig post mangler sluttest.
+- 30 automatiske tests bestået: inkl. lange noter, navn, gammel dato, ETag-konflikt, journal, midnat under preflight og idempotent linksammenfletning. Browsertest med mocks: opret, redigér/bevar opretter, historisk dag låst, eget vindue, usikkert resultat. Isoleret updater-test: succes og rollback bevarer config og oprindeligt indhold.
+- Version 48 er kumulativ med version 47. Updateren tager backup af content.json og tilføjer kun manglende slot-links; eksisterende serverændringer, placeringer og inaktive links bevares. PDF'er, admin-config, IIS og serviceindstillinger ændres ikke. Privat ZIP indeholder fire flow-adresser, men ingen content.json/PDF/admin-config. LogDate bør indekseres i SharePoint, inden listen vokser stor.
+
 ## Samlet dagsopdatering klar lokalt (20260917-47) — ikke installeret på serveren
 
 - Tilføj punkt i Åbne checklister: vælg konkret Run.Id (også adhoc) og titel. Dropdown viser kun lister med åbne punkter i henteflowets svar. Flowet kontrollerer OCC_Runs.Status=Active før oprettelse i OCC_RunItems. SortOrder=0, Done/StartFlow/Alerted=No.

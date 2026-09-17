@@ -1,6 +1,10 @@
-# Dagsopdatering 17. september 2026 — version 47
+# Dagsopdatering 17. september 2026 — version 48
 
-Pakken er PRIVAT: den indeholder to signerede Power Automate-adresser. Del den ikke i GitHub, mail eller en offentlig mappe. Kopiér kun til den aftalte OCC-server.
+Version 48 indeholder alt fra 47 samt fælles Daily log, navne, datolås, ETag-beskyttet redigering, hover og separat vindue. Online Slot Coordination og E-Airport Slots flettes ind under Trafik uden at overskrive eksisterende serverændringer.
+
+Pakken indeholder FIRE private flow-adresser. Daily log-læseflowet er kontrolleret med 0 poster. Oprettelse og redigering er kun testet mod mocks; første rigtige entry skal kontrolleres i SharePoint og flowhistorikken. SharePoint Created By viser forbindelseskontoen; de viste navne er selvangivne. Historiske entries låses i portalens skrivevej, ikke automatisk ved direkte redigering i SharePoint. LogDate bør indekseres for større lister.
+
+Pakken er PRIVAT: den indeholder fire signerede Power Automate-adresser. Del den ikke i GitHub, mail eller en offentlig mappe. Kopiér kun til den aftalte OCC-server.
 
 ## Med i pakken
 
@@ -14,19 +18,19 @@ Pakken er PRIVAT: den indeholder to signerede Power Automate-adresser. Del den i
 
 ## Installation på DK-AP-PR-OCCH01
 
-Kopiér OCCtools-daily-private-20260917-47.zip til C:\Temp. Kør i PowerShell som administrator:
+Kopiér OCCtools-daily-private-20260917-48.zip til C:\Temp. Kør i PowerShell som administrator:
 
 ```powershell
-$zip = 'C:\Temp\OCCtools-daily-private-20260917-47.zip'
-$unpack = 'C:\Temp\OCCtools-daily-20260917-47'
+$zip = 'C:\Temp\OCCtools-daily-private-20260917-48.zip'
+$unpack = 'C:\Temp\OCCtools-daily-20260917-48'
 if (Test-Path -LiteralPath $unpack) { throw 'Udpakningsmappen findes allerede. Stop og kontrollér om opdateringen allerede er kørt.' }
 Expand-Archive -LiteralPath $zip -DestinationPath $unpack
 & "$unpack\Update-OCCtools-Daily.ps1" -Destination 'C:\OCCtools'
 ```
 
-Scriptet stopper/genstarter kun OCCtools kortvarigt, tager backup og kontrollerer de to nye endpoints lokalt. Det opretter ikke SharePoint-poster og ændrer ikke admin-login, eksisterende data, PDF'er, IIS eller serviceindstillinger. Ved fejl gendannes de eksisterende filer fra backup. Nye ubrugte modulfiler kan blive liggende.
+Scriptet stopper/genstarter kun OCCtools kortvarigt, tager backup og kontrollerer de nye endpoints lokalt. Det opretter ikke SharePoint-poster og ændrer ikke admin-login, eksisterende data, PDF'er, IIS eller serviceindstillinger. Ved fejl gendannes de eksisterende filer fra backup. Nye ubrugte modulfiler kan blive liggende.
 
-Åbn https://occ.ne.int/OCCtools/ og tryk Ctrl+F5. Ingen af de tidligere 43/44/45-opdateringspakker skal installeres først.
+Åbn https://occ.ne.int/OCCtools/ og tryk Ctrl+F5. Ingen af de tidligere 43/44/45/47-opdateringspakker skal installeres først.
 
 ## Kontrol efter installation
 

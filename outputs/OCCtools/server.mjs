@@ -8,6 +8,7 @@ import {spawn} from 'node:child_process';
 import {templateReader} from './templates.mjs';
 import {logsReader} from './logs.mjs';
 import {logWriter} from './log-create.mjs';
+import {dailyLogService} from './daily-log.mjs';
 import {checklistItemWriter} from './checklist-item.mjs';
 import {normalizeRunitem} from './runitems.mjs';
 import {startWriter,validateStart} from './checklist-start.mjs';
@@ -24,6 +25,7 @@ if(!fs.existsSync(file))fs.writeFileSync(file,JSON.stringify({revision:1,...JSON
 let content=JSON.parse(fs.readFileSync(file,'utf8'));
 const logCreateFile=process.env.OCC_LOG_CREATE_FLOW_URL_FILE||path.join(dataDir,'log-create-flow-url.txt');
 const createLogEntry=logWriter(root,logCreateFile,path.join(dataDir,'log-create-attempts'));
+const dailyLog=dailyLogService({root,readFile:process.env.OCC_DAILY_LOG_READ_FLOW_URL_FILE||path.join(dataDir,'daily-log-read-flow-url.txt'),writeFile:process.env.OCC_DAILY_LOG_WRITE_FLOW_URL_FILE||path.join(dataDir,'daily-log-write-flow-url.txt'),journalDir:path.join(dataDir,'daily-log-attempts')});
 const checklistItemFile=process.env.OCC_CHECKLIST_ITEM_FLOW_URL_FILE||path.join(dataDir,'checklist-item-flow-url.txt');
 const createChecklistItem=checklistItemWriter(root,checklistItemFile,path.join(dataDir,'checklist-item-attempts'));
 const sessions=new Map();let failures=0,blockedUntil=0;
@@ -95,6 +97,7 @@ if(route.startsWith('/api/')){
  if(req.method==='GET'&&route==='/api/templates')return reply(res,200,templates.snapshot());
  if(req.method==='GET'&&route==='/api/logs')return reply(res,200,logs.snapshot());
  if(req.method==='GET'&&route==='/api/log-create')return reply(res,200,{configured:fs.existsSync(logCreateFile)});
+ if(req.method==='GET'&&route==='/api/daily-log')return reply(res,200,dailyLog.status());
  if(req.method==='GET'&&route==='/api/checklist-item')return reply(res,200,{configured:fs.existsSync(checklistItemFile)});
  if(req.method==='GET'&&route==='/api/checklist-start')return reply(res,200,{configured:fs.existsSync(startFlowFile),ready:startReadReady&&fs.existsSync(startFlowFile)});
  if(req.method==='GET'&&route==='/api/flightpoint')return reply(res,200,{configured:fs.existsSync(flowFile),data:flightpointCache});
@@ -108,6 +111,9 @@ if(route.startsWith('/api/')){
  if(req.method==='GET'&&route==='/api/session'){const s=session(req);return reply(res,200,{authenticated:!!s,csrf:s?.csrf,configured:!!cfg.passwordHash});}
  if(!['POST','PUT'].includes(req.method))return reply(res,405,{error:'Metoden er ikke tilladt.'});
  if(req.headers.origin!==origin)return reply(res,403,{error:'Anmodningen kommer fra en anden adresse end den konfigurerede portal.'});
+ if(req.method==='POST'&&(route==='/api/daily-log/read'||route==='/api/daily-log/write')){
+  try{const b=await body(req,450000);return reply(res,200,route.endsWith('/read')?await dailyLog.read(b.date):await dailyLog.write(b));}catch(e){return reply(res,e.status||502,{error:e.message,uncertain:e.uncertain===true});}
+ }
  if(req.method==='POST'&&route==='/api/log-create'){
   const input=await body(req,4096);
   try{return reply(res,200,await createLogEntry(input));}catch(e){return reply(res,e.status||502,{error:e.message,uncertain:e.uncertain!==false&&e.status!==400&&e.status!==503});}
@@ -156,7 +162,7 @@ const manuals={
  '/manuals/gna-occ-howto.pptx':{file:'gna-occ-howto.pptx',type:'application/vnd.openxmlformats-officedocument.presentationml.presentation',disposition:'attachment'}
 };
 if(manuals[route]){const m=manuals[route],target=path.join(root,'dist','manuals',m.file);if(!fs.existsSync(target))return reply(res,404,{error:'Manualen findes ikke.'});res.writeHead(200,{'Content-Type':m.type,'Content-Length':fs.statSync(target).size,'Content-Disposition':`${m.disposition}; filename="${m.file}"`,'Cache-Control':'private, max-age=300'});if(req.method==='HEAD')return res.end();fs.createReadStream(target).pipe(res);return;}
-const assets={'/documents.js':'documents.js','/templates.js':'templates.js','/':'index.html','/app.js':'app.js','/style.css':'style.css','/wheel.css':'wheel.css','/logo.png':'logo.png'};const asset=assets[route];if(!asset)return reply(res,404,{error:'Ikke fundet.'});
+const assets={'/daily-log.js':'daily-log.js','/documents.js':'documents.js','/templates.js':'templates.js','/':'index.html','/app.js':'app.js','/style.css':'style.css','/wheel.css':'wheel.css','/logo.png':'logo.png'};const asset=assets[route];if(!asset)return reply(res,404,{error:'Ikke fundet.'});
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png'};res.writeHead(200,{'Content-Type':types[path.extname(asset)],'Cache-Control':asset==='index.html'?'no-cache':'public, max-age=300'});if(req.method==='HEAD')return res.end();fs.createReadStream(path.join(root,'dist',asset)).pipe(res);
 }catch(e){if(!res.headersSent)reply(res,e.status||500,{error:e.status?e.message:'Handlingen kunne ikke gennemføres. Prøv igen.'});else res.end();console.error('OCC request error:',e.message);}});
 server.listen(port,'127.0.0.1',()=>console.log(`OCC tools: http://127.0.0.1:${port}${base}/`));

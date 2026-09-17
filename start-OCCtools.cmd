@@ -16,6 +16,8 @@ set "OCC_START_READ_READY=1"
 set "OCC_LOG_CREATE_FLOW_URL_FILE=%~dp0work\log-create-flow-url.txt"
 set "OCC_CHECKLIST_ITEM_FLOW_URL_FILE=%~dp0work\checklist-item-flow-url.txt"
 set "OCC_LOGS_FLOW_URL_FILE=%~dp0work\logs-flow-url.txt"
+set "OCC_DAILY_LOG_READ_FLOW_URL_FILE=%~dp0work\daily-log-read-flow-url.txt"
+set "OCC_DAILY_LOG_WRITE_FLOW_URL_FILE=%~dp0work\daily-log-write-flow-url.txt"
 echo Starter OCC-portalen...
 node outputs\OCCtools\server.mjs
 pause
