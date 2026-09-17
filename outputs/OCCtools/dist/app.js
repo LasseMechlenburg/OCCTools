@@ -11,7 +11,7 @@ function activeControl(item,label){
  const row=el('label','check'),input=el('input');input.type='checkbox';input.checked=item.active!==false;
  input.onchange=()=>{item.active=input.checked;};row.append(input,document.createTextNode(label));return row;
 }
-async function api(route,options={}){const r=await fetch('./api/'+route,{...options,headers:{'Content-Type':'application/json',...(auth.csrf?{'X-CSRF-Token':auth.csrf}:{}),...options.headers}});const v=await r.json();if(!r.ok)throw new Error(v.error||'Der opstod en fejl.');return v;}
+async function api(route,options={}){const r=await fetch('./api/'+route,{...options,headers:{'Content-Type':'application/json',...(auth.csrf?{'X-CSRF-Token':auth.csrf}:{}),...options.headers}});const v=await r.json();if(!r.ok)throw Object.assign(new Error(v.error||'Der opstod en fejl.'),{uncertain:v.uncertain,status:r.status});return v;}
 function link(name,url,cls='primary'){const a=el('a',cls,name);a.href=url;a.target='_blank';a.rel='noopener noreferrer';if(cls==='textButton'){a.title=name;a.setAttribute('aria-label',name+' – åbner i nyt vindue');}return a;}
 // A normal click on an outbound link requests its own movable browser window.
 // PDF panels and internal menus handle their own clicks and are not targeted here.

@@ -41,7 +41,7 @@ try {
  $passwordText = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
  if ($passwordText.Length -lt 14) { throw 'Adgangskoden skal have mindst 14 tegn.' }
  New-Item -ItemType Directory -Path $targetFull | Out-Null
- foreach ($name in @('dist','server.mjs','templates.mjs','logs.mjs','runitems.mjs','checklist-start.mjs','checklist-done.mjs','documents.mjs','pdf-index.py','pdf-preview.py','flow-request.ps1','start-request.ps1','done-request.ps1','init-admin.mjs','seed.json','package.json','README.md','DEPLOY.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $targetFull -Recurse }
+ foreach ($name in @('dist','server.mjs','templates.mjs','logs.mjs','log-create.mjs','log-create-request.ps1','runitems.mjs','checklist-start.mjs','checklist-done.mjs','documents.mjs','pdf-index.py','pdf-preview.py','flow-request.ps1','start-request.ps1','done-request.ps1','init-admin.mjs','seed.json','package.json','README.md','DEPLOY.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $targetFull -Recurse }
  $setupJson = @{ username=$AdminUsername; password=$passwordText; origin=$Origin; port=$Port } | ConvertTo-Json -Compress
  # JSON escapes preserve Danish characters through Windows PowerShell 5.1's native pipe.
  $setupAscii = [regex]::Replace($setupJson, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })

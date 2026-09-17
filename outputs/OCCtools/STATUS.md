@@ -1,5 +1,13 @@
 # OCC status, 17. september 2026
 
+## Log-oprettelse 20260917-45
+
+- Lav entry i Crew-/Trafiklog kræver kun Title (1–255 tegn). Flowkontrakt: logType=crew|traffic og title; Response {ok:true}. Faste feltværdier sættes i flowet: dansk dagsdato, Info only, Open, Traffic Log Type=General Info (ikke Flight).
+- Ny privat fil data/log-create-flow-url.txt på serveren; lokalt work/log-create-flow-url.txt. Aldrig i Git eller frontend. GET /api/log-create viser kun configured. POST er under den eksisterende interne adgangsmodel og kræver korrekt Origin.
+- Request-id og vedvarende journal forhindrer samme anmodning i at blive sendt igen. Ubebekræftede forsøg kræver manuel kontrol; ingen automatisk retry. Det er ikke en global unikhedsregel på titler, og flowets interne retry-politik er separat.
+- Formularen bevarer titel, låser under gemning, og stopper ved usikkert resultat. Fanens sessionStorage husker uafklarede forsøg. Ved succes genhentes loglisten; læsefejl må ikke føre til ny oprettelse.
+- Update-OCCtools-Logs.ps1 tager backup og genstarter kun OCCtools. Privat pakke indeholder flowfil; admin-konfiguration, øvrige flowfiler og driftsdata udskiftes ikke. Ingen rigtige logposter er oprettet under udviklingstest.
+
 ## UI-opdatering 20260917-44
 
 - Admin → Menuer og links har Aktiv menu og Aktivt link. Manglende felt betyder aktiv, så eksisterende indhold bevares uændret. Gem ændringer udgiver valget.

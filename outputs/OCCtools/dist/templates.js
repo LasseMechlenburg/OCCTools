@@ -117,7 +117,7 @@ let utilitySelected='',utilityTimer;
 const utilityButtons=new Map(),utilityNav=el('nav','utilityRail');utilityNav.setAttribute('aria-label','FlightPoint-genveje');
 utilityNav.append(el('h2','','Overblik'));
 function closeUtilityPreview(){clearTimeout(utilityTimer);if(!utilitySelected)return;utilitySelected='';utilityButtons.forEach(b=>b.setAttribute('aria-expanded','false'));if($('#detail').classList.contains('sideDetail'))$('#detail').close();closeCalendarFloat();}
-function scheduleUtilityClose(){clearTimeout(utilityTimer);utilityTimer=setTimeout(closeUtilityPreview,300);}
+function scheduleUtilityClose(){clearTimeout(utilityTimer);if($('#detailContent .logEntryForm'))return;utilityTimer=setTimeout(closeUtilityPreview,300);}
 function wireUtilityPanel(panel){if(!panel)return;panel.onpointerenter=()=>clearTimeout(utilityTimer);panel.onpointerleave=scheduleUtilityClose;}
 function showUtilityPreview(key){
  clearTimeout(utilityTimer);if(utilitySelected===key&&((key==='calendar'&&$('#calendarFloat'))||(key!=='calendar'&&$('#detail').open)))return;
@@ -173,15 +173,49 @@ async function loadLogs(force=false){
   logsData=r.data;return logsData;
  }catch(e){logsError=e.message;}finally{logsPending=null;updateLogCounts();}})();return logsPending;
 }
+const logEntryDrafts=new Map();
+function logEntryState(logType){
+ if(!logEntryDrafts.has(logType)){
+  let saved=null;try{saved=JSON.parse(sessionStorage.getItem('occ-log-entry-'+logType));}catch{}
+  logEntryDrafts.set(logType,{title:typeof saved?.title==='string'?saved.title:'',requestId:saved?.requestId||'',uncertain:!!saved?.attempted,busy:false,show:!!saved,message:saved?.attempted?'Et tidligere forsøg skal kontrolleres i SharePoint, før du opretter igen.':''});
+ }
+ return logEntryDrafts.get(logType);
+}
+function rememberLogEntry(logType,state){try{sessionStorage.setItem('occ-log-entry-'+logType,JSON.stringify({title:state.title,requestId:state.requestId,attempted:state.busy||state.uncertain}));}catch{}}
+function logEntryControls(logType,onSaved){
+ const state=logEntryState(logType),box=el('section','logEntryBox');let configured=null;
+ function draw(){
+  box.replaceChildren();
+  const toggle=button(state.show?'Luk entry-felt':'＋ Lav entry','primary',()=>{state.show=!state.show;draw();if(state.show)box.querySelector('input')?.focus();});toggle.disabled=state.busy;toggle.setAttribute('aria-expanded',String(state.show));box.append(toggle);
+  if(!state.show)return;
+  const form=el('form','logEntryForm'),label=el('label','field','Title'),input=el('input'),message=el('p',state.uncertain?'error':'muted',state.message),save=el('button','primary','Gem entry');
+  input.type='text';input.maxLength=255;input.required=true;input.value=state.title;input.placeholder='Skriv titlen på logposten';input.disabled=state.busy||state.uncertain;label.append(input);message.setAttribute('role','status');save.type='submit';
+  const availability=configured===false?'Oprettelsesflowet er ikke konfigureret på serveren.':configured===null?'Kontrollerer oprettelsesflow…':'';
+  form.append(label,el('p','muted','Dags dato (dansk tid) · Info only · Open'+(logType==='traffic'?' · General Info':'')),el('p','muted',availability),message,save);box.append(form);
+  const setButton=()=>{save.disabled=state.busy||state.uncertain||configured!==true||!state.title.trim();save.textContent=state.busy?'Gemmer…':'Gem entry';};setButton();
+  input.oninput=()=>{state.title=input.value;state.requestId='';state.message='';rememberLogEntry(logType,state);setButton();};
+  if(state.uncertain){const reset=button('Jeg har kontrolleret SharePoint','quiet',()=>{if(!confirm('Kontrollér loglisten og flowhistorikken først. Hvis posten allerede findes, skal du ikke oprette den igen. Vil du rydde det tidligere forsøg?'))return;Object.assign(state,{title:'',requestId:'',uncertain:false,message:''});rememberLogEntry(logType,state);draw();});form.append(reset);}
+  form.onsubmit=async e=>{
+   e.preventDefault();if(state.busy||state.uncertain||configured!==true||!state.title.trim())return;
+   state.title=state.title.trim();state.requestId=state.requestId||crypto.randomUUID();state.busy=true;state.message='';rememberLogEntry(logType,state);draw();
+   try{
+    const result=await api('log-create',{method:'POST',body:JSON.stringify({logType,title:state.title,requestId:state.requestId})});if(result.ok!==true)throw new Error('Gemningen blev ikke bekræftet.');
+    Object.assign(state,{title:'',requestId:'',uncertain:false,message:'Logposten er gemt i SharePoint.'});state.busy=false;rememberLogEntry(logType,state);draw();
+    await onSaved();if(logsError){state.message='Logposten er gemt, men listen kunne ikke opdateres. Brug Opdatér — opret ikke posten igen.';draw();}
+   }catch(error){state.busy=false;state.uncertain=error.uncertain!==false;state.message=state.uncertain?'Gemningen blev ikke bekræftet. Posten kan være oprettet. Kontrollér SharePoint og flowhistorikken før et nyt forsøg.':error.message;rememberLogEntry(logType,state);draw();}
+  };
+ }
+ draw();api('log-create').then(r=>{configured=r.configured===true;draw();}).catch(()=>{configured=false;draw();});return box;
+}
 function openLogView(key){
  const title=key==='crewlog'?'Crew log':'Trafik log',dataKey=key==='crewlog'?'crewLog':'trafficLog';
  showDetail('FlightPoint',title,'');
- const c=$('#detailContent'),view=el('section');c.replaceChildren(view);
+ const c=$('#detailContent'),view=el('section'),entries=logEntryControls(key==='crewlog'?'crew':'traffic',async()=>{query='';await loadLogs(true);render();});c.replaceChildren(view);
  let query='';
  const current=()=>c.contains(view);
  function render(){
   if(!current())return;
-  view.replaceChildren(el('h2','',title));
+  view.replaceChildren(el('h2','',title),entries);
   const refresh=button(logsPending?'Henter…':'Opdatér','quiet',async()=>{const task=loadLogs(true);render();await task;render();});refresh.disabled=!!logsPending;view.append(refresh);
   if(logsError)view.append(el('p','error',logsError+(logsData?' Viser senest hentede data.':'')));
   if(!logsData){view.append(el('p','notice',logsPending?'Henter åbne logposter…':'Ingen logdata hentet.'));return;}
